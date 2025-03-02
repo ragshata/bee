@@ -4,3 +4,4 @@ pygeoip
 user-agents
 loguru
 requests
+gunicorn
