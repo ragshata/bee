@@ -1,4 +1,4 @@
 from lic import check_license
 
 
-print(check_license('86ADB6CUTYOZ3GKNF2'))
+print(check_license('9XN5FEPOSWBGFZ33CK'))
