@@ -37,7 +37,7 @@ def application():
     logger.debug("[1] Check License")
     try:
         encoded = decrypt(json["transport"])
-        key = "86ADB6CUTYOZ3GKNF2"
+        key = ex_key(encoded)
         logger.debug(f"api_key: {key}")
     except Exception as decrypt_error:
         logger.exception(decrypt_error)
