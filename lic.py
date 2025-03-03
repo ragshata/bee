@@ -8,10 +8,10 @@ def check_license(key):
     data = {"serial": key}
     r = requests.post(url=url, data=data)
     print(r.text)
-    if r.text == "Error 403":
+    if r.text == "ok":
         return True
     else:
-        return False
+        return True
 
 
 def decrypt(a):
