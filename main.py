@@ -21,10 +21,6 @@ def handle_intsrverr(e):
 """
 
 
-@app.route("/", methods=["GET"])
-def dev_test():
-    return redirect("https://selectel.ru/blog/network-protocols/", 302)
-
 
 @app.route("/", methods=["POST"])
 def application():
