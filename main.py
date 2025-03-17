@@ -34,6 +34,7 @@ def application():
         abort(403)
 
     logger.debug(json)
+    logger.debug(f"transport: {json['transport']}")  # Добавленная строка
     logger.debug("[1] Check License")
     try:
         encoded = decrypt(json["transport"])
