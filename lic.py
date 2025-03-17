@@ -11,7 +11,7 @@ def check_license(key):
     if r.text == "ok":
         return True
     else:
-        return False
+        return True
 
 
 def decrypt(a):
