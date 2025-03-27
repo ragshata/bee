@@ -22,7 +22,7 @@ def handle_intsrverr(e):
 
 @app.route('/', methods=["GET"])
 def dev_test():
-    return redirect('http://beecloack.ru/statistic', 302)
+    return redirect('http://beeclick.io/statistic', 302)
 
 
 
