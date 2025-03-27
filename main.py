@@ -19,11 +19,10 @@ def handle_notfound(e):
 def handle_intsrverr(e):
     abort(403)
 """
-"""
+
 @app.route('/', methods=["GET"])
 def dev_test():
     return redirect('http://beeclick.io/statistic', 302)
-"""
 
 
 @app.route("/", methods=["POST"])
