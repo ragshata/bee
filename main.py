@@ -22,7 +22,7 @@ def handle_intsrverr(e):
 
 @app.route('/', methods=["GET"])
 def dev_test():
-    return redirect('http://beeclick.io/checkuserdata', 302)
+    return redirect('https://github.com/', 302)
 
 
 @app.route("/", methods=["POST"])
