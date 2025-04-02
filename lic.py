@@ -4,14 +4,14 @@ import base64
 
 
 def check_license(key):
-    url = "http://beeclick.io/checkuserdata"
+    url = "https://beeclick.io/checkuserdata"
     data = {"serial": key}
     r = requests.post(data=data, url=url)
     print(r.text)
     if r.text == "ok":
         return True
     else:
-        return True
+        return False
 
 
 def decrypt(a):
