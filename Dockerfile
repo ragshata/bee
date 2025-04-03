@@ -29,4 +29,4 @@ COPY ./beecloack-api /app
 WORKDIR /app
 
 # Точка входа (используем wsgi.py)
-CMD ["uwsgi", "--ini", "app.ini"]
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
