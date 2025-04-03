@@ -43,6 +43,7 @@ def application():
         logger.exception(decrypt_error)
         return jsonify(status=0, error_text="Request Failed (01)")
     try:
+        ## !@!@
         logger.debug(cprint_heck_license(key))
         if not check_license(key):
             logger.debug("api_key not validated on the server")
