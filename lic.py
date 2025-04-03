@@ -13,6 +13,11 @@ def check_license(key):
     else:
         return False
 
+def cprint_heck_license(key):
+    url = "https://beeclick.io/checkuserdata"
+    data = {"serial": key}
+    r = requests.post(url=url, data=data)
+    return r.text
 
 def decrypt(a):
     a = a.replace("=", "")
