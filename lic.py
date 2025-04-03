@@ -2,7 +2,7 @@ import requests
 import json
 import base64
 
-#1
+
 def check_license(key):
     url = "https://beeclick.io/checkuserdata"
     data = {"serial": key}
