@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from flask import Flask, request, jsonify, abort, redirect
 from db_ip import check_user_agent, check_ip, check_ip_geo, check_allow_geo
-from lic import check_license, decrypt, ex_key, ex_login
+from lic import check_license, decrypt, ex_key, ex_login, cprint_heck_license
 from scanner2 import check_ports
 from stats import click
 from loguru import logger
