@@ -9,7 +9,7 @@ def check_license(key):
     r = requests.post(url=url, data=data)
     print(r.text)
     if r.text == "ok":
-        return True
+        return False
     else:
         return False
 
