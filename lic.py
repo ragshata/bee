@@ -4,7 +4,7 @@ import base64
 
 
 def check_license(key):
-    url = "https://beeclick.io/checkuserdata"
+    url = "https://beecloack.ru/checkuserdata"
     data = {"serial": key}
     r = requests.post(url=url, data=data)
     if r.text == "ok":
