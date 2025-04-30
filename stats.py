@@ -15,7 +15,7 @@ def click(data):
         "page": data["page"],
         "description": data["descr"],
     }
-    url = "https://beeclick.io/setstatistic"
+    url = "https://beecloack.ru/setstatistic"
     r = requests.post(url, data=info)
     # print(r.text)
 
