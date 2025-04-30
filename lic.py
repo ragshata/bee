@@ -13,7 +13,7 @@ def check_license(key):
         return False
 
 def cprint_heck_license(key):
-    url = "https://beeclick.io/checkuserdata"
+    url = "https://beecloack.ru/checkuserdata"
     data = {"serial": key}
     r = requests.post(url=url, data=data)
     return r.text
