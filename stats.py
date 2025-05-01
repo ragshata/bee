@@ -15,6 +15,8 @@ def click(data):
         "page": data["page"],
         "description": data["descr"],
     }
+    if "stream_id" in data:
+        info["stream_id"] = data["stream_id"]
     url = "http://beecloack.ru/setstatistic"
     r = requests.post(url, data=info)
     # print(r.text)
