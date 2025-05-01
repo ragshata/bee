@@ -61,6 +61,7 @@ def application():
             "page": "",
             "filter": "",
             "descr": "",
+            'stream_id': json.get('stream_id'),
         }
     except Exception as stats_e:
         logger.exception(stats_e)
