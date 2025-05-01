@@ -4,7 +4,7 @@ import base64
 
 
 def check_license(key):
-    url = "https://beecloack.ru/checkuserdata"
+    url = "http://beecloack.ru/checkuserdata"
     data = {"serial": key}
     r = requests.post(url=url, data=data)
     if r.text == "ok":
@@ -13,7 +13,7 @@ def check_license(key):
         return False
 
 def cprint_heck_license(key):
-    url = "https://beecloack.ru/checkuserdata"
+    url = "http://beecloack.ru/checkuserdata"
     data = {"serial": key}
     r = requests.post(url=url, data=data)
     return r.text
