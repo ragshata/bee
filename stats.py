@@ -17,7 +17,7 @@ def click(data):
     }
     if "stream_id" in data:
         info["stream_id"] = data["stream_id"]
-    url = "http://beecloack.ru/setstatistic"
+    url = "https://beeclick.io/setstatistic"
     r = requests.post(url, data=info)
     # print(r.text)
 
