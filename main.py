@@ -9,7 +9,7 @@ from loguru import logger
 logger.add("api.log", rotation="500 MB", encoding="utf-8", level="DEBUG")
 app = Flask(__name__)
 
-
+#2
 """
 @app.errorhandler(404)
 def handle_notfound(e):
