@@ -34,7 +34,7 @@ def application():
         abort(403)
 
     logger.debug(json)
-
+    logger.debug(f"[0] Pause check, incoming stream_id = {json.get('stream_id')}")
         # ———————— ШАГ 0: пауза потока ————————
     stream_id = json.get("stream_id")
     if stream_id:
