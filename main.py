@@ -35,26 +35,12 @@ def application():
 
     logger.debug(json)
     logger.debug(f"[0] Pause check, incoming stream_id = {json.get('stream_id')}")
-        # ———————— ШАГ 0: пауза потока ————————
-    stream_id = json.get("stream_id")
-    if stream_id:
-        stream = get_stream_by_id(stream_id)
-        if stream and stream.get("paused") == 1:
-            logger.info(f"Stream {stream_id} is PAUSED → returning White")
-            # лог статистики: сразу «White», фильтр = «Pause»
-            stats = {
-                "ip": json["ip"],
-                "ua": json["user-agent"],
-                "ref": json["referer"],
-                "login": ex_login(decrypt(json["transport"])),
-                "page": "White",
-                "filter": "Pause",
-                "descr": "Stream is paused",
-                "stream_id": stream_id
-            }
-            click(stats)
-            return jsonify(status=1, redirect=1)
-    # ——————————————————————————————————————
+    # 0) Pause-check -----------------------------------------------------------
+    stream_id = json.get("stream_id")           # приходит из index.php
+    if is_stream_paused(stream_id):
+        logger.debug(f"Stream {stream_id} is PAUSED –> white")
+        return jsonify(status=1, redirect=1)
+    # -------------------------------------------------------------------------
     
     logger.debug(f"transport: {json['transport']}")  # Добавленная строка
     logger.debug("[1] Check License")
