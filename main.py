@@ -15,6 +15,30 @@ def is_ipv6(ip):
     except (OSError, AttributeError):
         return False
 
+def detect_device(ua):
+    if "Mobile" in ua:
+        return "Mobile"
+    if "Tablet" in ua:
+        return "Tablet"
+    return "Desktop"
+
+def detect_os(ua):
+    ua = ua.lower()
+    if "windows" in ua: return "Windows"
+    if "android" in ua: return "Android"
+    if "iphone" in ua or "ipad" in ua: return "iOS"
+    if "mac os" in ua: return "MacOS"
+    if "linux" in ua: return "Linux"
+    return "Other"
+
+def detect_browser(ua):
+    if "Chrome" in ua: return "Chrome"
+    if "Firefox" in ua: return "Firefox"
+    if "Safari" in ua and "Chrome" not in ua: return "Safari"
+    if "Edge" in ua: return "Edge"
+    if "Opera" in ua or "OPR" in ua: return "Opera"
+    return "Other"
+
 logger.add("api.log", rotation="500 MB", encoding="utf-8", level="DEBUG")
 app = Flask(__name__)
 
@@ -57,7 +81,32 @@ def application():
         logger.debug(f"IPv6 detected ({ip}), filter enabled -> white")
         return jsonify(status=1, redirect=1)
     # -------------------------------------------------------------------------
-    
+
+    # 0.2) Device, OS, Browser filter ------------------------------------------
+    device_filter = json.get('device_filter', '')
+    os_filter = json.get('os_filter', '')
+    browser_filter = json.get('browser_filter', '')
+    user_agent = json.get('user-agent', '')
+
+    allowed_devices = [d.strip() for d in device_filter.split(",") if d.strip()]
+    allowed_os = [o.strip() for o in os_filter.split(",") if o.strip()]
+    allowed_browsers = [b.strip() for b in browser_filter.split(",") if b.strip()]
+
+    ua_device = detect_device(user_agent)
+    ua_os = detect_os(user_agent)
+    ua_browser = detect_browser(user_agent)
+
+    if allowed_devices and ua_device not in allowed_devices:
+        logger.debug(f"Device '{ua_device}' not allowed. Redirect to White Page.")
+        return jsonify(status=1, redirect=1)
+    if allowed_os and ua_os not in allowed_os:
+        logger.debug(f"OS '{ua_os}' not allowed. Redirect to White Page.")
+        return jsonify(status=1, redirect=1)
+    if allowed_browsers and ua_browser not in allowed_browsers:
+        logger.debug(f"Browser '{ua_browser}' not allowed. Redirect to White Page.")
+        return jsonify(status=1, redirect=1)
+    # -------------------------------------------------------------------------
+
     logger.debug(f"transport: {json['transport']}")  # Добавленная строка
     logger.debug("[1] Check License")
     try:
