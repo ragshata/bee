@@ -6,6 +6,14 @@ from scanner2 import check_ports
 from stats import click
 from loguru import logger
 from db_streams import is_stream_paused
+import socket
+
+def is_ipv6(ip):
+    try:
+        socket.inet_pton(socket.AF_INET6, ip)
+        return True
+    except (OSError, AttributeError):
+        return False
 
 logger.add("api.log", rotation="500 MB", encoding="utf-8", level="DEBUG")
 app = Flask(__name__)
@@ -39,6 +47,14 @@ def application():
     stream_id = json.get("stream_id")           # приходит из index.php
     if is_stream_paused(stream_id):
         logger.debug(f"Stream {stream_id} is PAUSED –> white")
+        return jsonify(status=1, redirect=1)
+    # -------------------------------------------------------------------------
+
+    # 0.1) IPv6-block check ----------------------------------------------------
+    block_ipv6 = json.get('block_ipv6', 0)
+    ip = json.get('ip', '')
+    if block_ipv6 == 1 and is_ipv6(ip):
+        logger.debug(f"IPv6 detected ({ip}), filter enabled -> white")
         return jsonify(status=1, redirect=1)
     # -------------------------------------------------------------------------
     
