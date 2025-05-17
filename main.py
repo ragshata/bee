@@ -94,11 +94,6 @@ def application():
     logger.debug(f"DB filters for stream {stream_id}: {filters}")
     logger.debug(f"Normalized ⇒ dev:{dev_filter}, os:{os_filter}, brw:{brw_filter}")
 
-    # нормализуем
-    dev_filter = [v.strip().lower() for v in device_filter_raw.split(",")  if v.strip()]
-    os_filter  = [v.strip().lower() for v in os_filter_raw.split(",")      if v.strip()]
-    brw_filter = [v.strip().lower() for v in browser_filter_raw.split(",") if v.strip()]
-
     ua_raw = (json_in.get("user-agent") or "").lower()
 
     def early_white(reason: str, descr: str):
