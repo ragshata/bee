@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 from flask import Flask, request, jsonify, abort, redirect
-from db_ip      import check_user_agent, check_ip, check_ip_geo, check_allow_geo
-from lic        import check_license, decrypt, ex_key, ex_login, cprint_heck_license
-from scanner2   import check_ports
-from stats      import click
-from loguru     import logger
-from db_streams import is_stream_paused, get_stream_filters
+from db_ip       import check_user_agent, check_ip, check_ip_geo, check_allow_geo
+from lic         import check_license, decrypt, ex_key, ex_login, cprint_heck_license
+from scanner2    import check_ports
+from stats       import click
+from loguru      import logger
+from db_streams  import is_stream_paused, get_stream_filters   # ← NEW
 import socket
 
-# ───────── helpers ─────────
+# ───────── helpers ──────────────────────────────────────────
 def is_ipv6(ip: str) -> bool:
     try:
         socket.inet_pton(socket.AF_INET6, ip)
@@ -17,30 +17,30 @@ def is_ipv6(ip: str) -> bool:
         return False
 
 def detect_device(ua: str) -> str:
-    if not ua:               return "other"
-    if "mobile" in ua.lower(): return "mobile"
-    if "tablet" in ua.lower(): return "tablet"
+    if not ua:            return "other"
+    if "mobile" in ua:    return "mobile"
+    if "tablet" in ua:    return "tablet"
     return "desktop"
 
 def detect_os(ua: str) -> str:
-    l = ua.lower() if ua else ""
-    if   "windows" in l: return "windows"
-    elif "android" in l: return "android"
-    elif "iphone"  in l or "ipad" in l: return "ios"
-    elif "mac os"  in l: return "macos"
-    elif "linux"   in l: return "linux"
+    ua = ua or ""
+    if "windows" in ua:   return "windows"
+    if "android" in ua:   return "android"
+    if "iphone" in ua or "ipad" in ua: return "ios"
+    if "mac os" in ua:    return "macos"
+    if "linux" in ua:     return "linux"
     return "other"
 
 def detect_browser(ua: str) -> str:
-    l = ua.lower() if ua else ""
-    if   "chrome"  in l:                      return "chrome"
-    elif "firefox" in l:                      return "firefox"
-    elif "safari"  in l and "chrome" not in l:return "safari"
-    elif "edge"    in l:                      return "edge"
-    elif "opera"   in l or "opr" in l:        return "opera"
+    ua = ua or ""
+    if "opr" in ua or "opera" in ua:        return "opera"
+    if "edg" in ua:                         return "edge"
+    if "chrome" in ua:                      return "chrome"
+    if "firefox" in ua:                     return "firefox"
+    if "safari" in ua and "chrome" not in ua: return "safari"
     return "other"
 
-# ───────── logger / app ─────────
+# ───────── logger / app ─────────────────────────────────────
 logger.add("api.log", rotation="500 MB", encoding="utf-8", level="DEBUG")
 app = Flask(__name__)
 
@@ -48,32 +48,30 @@ app = Flask(__name__)
 def dev_test():
     return redirect("https://github.com/", 302)
 
-# ───────── MAIN ─────────
+# ────────── MAIN ────────────────────────────────────────────
 @app.route("/", methods=["POST"])
 def application():
-
-    # ---------- raw json ----------
+    # 0. raw JSON
     try:
         json_in = request.get_json()
     except Exception:
         abort(403)
 
     logger.debug(json_in)
-    logger.debug(f"[0] Pause check, incoming stream_id = {json_in.get('stream_id')}")
-
-    # ---------- 0.a pause ----------
     stream_id = json_in.get("stream_id")
+
+    # 0.a pause
     if is_stream_paused(stream_id):
-        logger.debug(f"Stream {stream_id} is PAUSED → white")
+        logger.debug(f"Stream {stream_id} paused → white")
         return jsonify(status=1, redirect=1)
 
-    # ---------- 0.b IPv6 ----------
     ip         = json_in.get("ip", "")
-    if json_in.get("block_ipv6") and is_ipv6(ip):
+    block_ipv6 = json_in.get("block_ipv6", 0)
+    if block_ipv6 and is_ipv6(ip):
         logger.debug(f"IPv6 {ip} blocked → white")
         return jsonify(status=1, redirect=1)
 
-    # ---------- 0.c decode transport ----------
+    # 0.b transport decode (login нужен для stat)
     try:
         encoded = decrypt(json_in.get("transport", ""))
         login   = ex_login(encoded)
@@ -82,8 +80,18 @@ def application():
         encoded = ""
         login   = ""
 
-    # ---------- 0.d Device / OS / Browser ----------
-    ua_raw = json_in.get("user-agent") or ""
+    # 0.c получаем фильтры из БД + то, что мог прислать PHP
+    filters_db = (get_stream_filters(stream_id) or {})
+    device_filter_raw  = f"{filters_db.get('device_filter','')},{json_in.get('device_filter','')}"
+    os_filter_raw      = f"{filters_db.get('os_filter','')},{json_in.get('os_filter','')}"
+    browser_filter_raw = f"{filters_db.get('browser_filter','')},{json_in.get('browser_filter','')}"
+
+    # нормализуем
+    dev_filter = [v.strip().lower() for v in device_filter_raw.split(",")  if v.strip()]
+    os_filter  = [v.strip().lower() for v in os_filter_raw.split(",")      if v.strip()]
+    brw_filter = [v.strip().lower() for v in browser_filter_raw.split(",") if v.strip()]
+
+    ua_raw = (json_in.get("user-agent") or "").lower()
 
     def early_white(reason: str, descr: str):
         logger.debug(f"[{reason}] {descr} → white")
@@ -94,39 +102,31 @@ def application():
         })
         return jsonify(status=1, redirect=1)
 
+    # пустой UA
     if not ua_raw:
-        return early_white("UA", "empty User-Agent")
+        return early_white("UA", "empty UA")
 
     ua_device  = detect_device(ua_raw)
     ua_os      = detect_os(ua_raw)
     ua_browser = detect_browser(ua_raw)
 
-   # 0.d берём фильтры из DB (по stream_id)
-    filters      = get_stream_filters(stream_id) or {}
-    dev_filter   = [v.lower() for v in filters.get("device_filter",  "").split(",") if v]
-    os_filter    = [v.lower() for v in filters.get("os_filter",      "").split(",") if v]
-    brw_filter   = [v.lower() for v in filters.get("browser_filter", "").split(",") if v]
-
-    if dev_filter and ua_device not in dev_filter:
+    if dev_filter and ua_device  not in dev_filter:
         return early_white("Device",  f"{ua_device} not in {dev_filter}")
-    if os_filter  and ua_os     not in os_filter:
+    if os_filter  and ua_os      not in os_filter:
         return early_white("OS",      f"{ua_os} not in {os_filter}")
     if brw_filter and ua_browser not in brw_filter:
         return early_white("Browser", f"{ua_browser} not in {brw_filter}")
 
-    # ---------- 1. License ----------
-    logger.debug(f"transport: {json_in.get('transport', '')}")
-    logger.debug("[1] Check License")
+    # 1. license
     try:
         key = ex_key(encoded)
-        logger.debug(cprint_heck_license(key))
         if not check_license(key):
             return jsonify(status=0, error_text="License Expired")
     except Exception as lic_e:
         logger.exception(lic_e)
         return jsonify(status=0, error_text="Request Failed (02)")
 
-    # ---------- 2. Base stats ----------
+    # 2. базовая stats-структура
     stats = {
         "ip": ip,
         "ua": ua_raw,
@@ -137,7 +137,6 @@ def application():
         "descr": "",
         "stream_id": stream_id,
     }
-
     # ---------- 3. Referrer ----------
     logger.info("[2] Check Referrer")
     try:
