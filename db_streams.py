@@ -19,3 +19,9 @@ def is_stream_paused(stream_id: int) -> bool:
         pass                       # глушим любые ошибки, считаем «паузы нет»
 
     return False
+def get_stream_filters(stream_id: int) -> dict | None:
+    """
+    SELECT device_filter, os_filter, browser_filter
+      FROM streams
+     WHERE id = %s
+    """
