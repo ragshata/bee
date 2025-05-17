@@ -16,11 +16,13 @@ def is_ipv6(ip: str) -> bool:
     except (OSError, AttributeError):
         return False
 
+
 def detect_device(ua: str) -> str:
     if not ua:               return "Other"
     if "Mobile" in ua:       return "Mobile"
     if "Tablet" in ua:       return "Tablet"
     return "Desktop"
+
 
 def detect_os(ua: str) -> str:
     if not ua:               return "Other"
@@ -32,13 +34,14 @@ def detect_os(ua: str) -> str:
     if "Linux"   in ua:      return "Linux"
     return "Other"
 
+
 def detect_browser(ua: str) -> str:
-    if not ua:                            return "Other"
-    if "Chrome"  in ua:                   return "Chrome"
-    if "Firefox" in ua:                   return "Firefox"
-    if "Safari"  in ua and "Chrome" not in ua:  return "Safari"
-    if "Edge"    in ua:                   return "Edge"
-    if "Opera"   in ua or "OPR" in ua:    return "Opera"
+    if not ua:                                return "Other"
+    if "Chrome"  in ua:                       return "Chrome"
+    if "Firefox" in ua:                       return "Firefox"
+    if "Safari"  in ua and "Chrome" not in ua: return "Safari"
+    if "Edge"    in ua:                       return "Edge"
+    if "Opera"   in ua or "OPR" in ua:        return "Opera"
     return "Other"
 
 # ───────────────────────── logger / app ─────────────────────
@@ -84,7 +87,7 @@ def application():
         login   = ""
 
     # 0.d device / OS / browser filters
-    ua_raw         = json_in.get("user-agent", "")
+    ua_raw         = json_in.get("user-agent") or ""      # ← всегда строка
     device_filter  = [v.strip() for v in json_in.get("device_filter",  "").split(",") if v.strip()]
     os_filter      = [v.strip() for v in json_in.get("os_filter",      "").split(",") if v.strip()]
     browser_filter = [v.strip() for v in json_in.get("browser_filter", "").split(",") if v.strip()]
@@ -92,9 +95,14 @@ def application():
     def early_white(reason: str, descr: str):
         logger.debug(f"[{reason}] {descr} → white")
         click({
-            "ip": ip, "ua": ua_raw, "ref": json_in.get("referer",""),
-            "login": login, "page": "White", "filter": reason,
-            "descr": descr, "stream_id": stream_id
+            "ip": ip,
+            "ua": ua_raw,                      # гарантированно строка
+            "ref": json_in.get("referer", ""),
+            "login": login,
+            "page": "White",
+            "filter": reason,
+            "descr": descr,
+            "stream_id": stream_id
         })
         return jsonify(status=1, redirect=1)
 
@@ -139,8 +147,8 @@ def application():
     # 3. referrer
     logger.info("[2] Check Referrer")
     try:
-        referer      = json_in.get("referer", "")
-        custom_ref   = json_in.get("cn_referer", "")
+        referer    = json_in.get("referer", "")
+        custom_ref = json_in.get("cn_referer", "")
         if referer:
             logger.debug("Check Referrer enabled")
             if custom_ref and custom_ref.lower() not in referer:
