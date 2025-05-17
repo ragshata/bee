@@ -38,14 +38,24 @@ def detect_os(ua: str) -> str:
 
 def detect_browser(ua: str) -> str:
     ua_l = ua.lower()
-    if not ua_l:                     return "other"
-    if "chrome"  in ua_l:            return "chrome"
-    if "firefox" in ua_l:            return "firefox"
-    if "safari"  in ua_l and "chrome" not in ua_l:
-        return "safari"
-    if "edge"    in ua_l:            return "edge"
-    if "opera"   in ua_l or "opr" in ua_l:
+    if not ua_l:
+        return "other"
+    # 1) Edge (в UA бывает edg/ или edge/)
+    if " edg/" in ua_l or " edge/" in ua_l:
+        return "edge"
+    # 2) Opera (есть ‘ opr/’ или ‘opera’)
+    if " opr/" in ua_l or " opera" in ua_l:
         return "opera"
+    # 3) Firefox
+    if " firefox/" in ua_l:
+        return "firefox"
+    # 4) Chrome (проверяем после Edge/Opera, иначе они попадут сюда)
+    if " chrome/" in ua_l:
+        return "chrome"
+    # 5) Safari – но только если это действительно Safari,
+    #    т.е. нет строки ‘chrome’
+    if " safari/" in ua_l and " chrome/" not in ua_l:
+        return "safari"
     return "other"
 
 # ───────── logger / app ─────────────────────────────────────
