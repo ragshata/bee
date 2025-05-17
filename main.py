@@ -5,7 +5,7 @@ from lic        import check_license, decrypt, ex_key, ex_login, cprint_heck_lic
 from scanner2   import check_ports
 from stats      import click
 from loguru     import logger
-from db_streams import is_stream_paused
+from db_streams import is_stream_paused, get_stream_filters
 import socket
 
 # ───────── helpers ─────────
@@ -101,10 +101,11 @@ def application():
     ua_os      = detect_os(ua_raw)
     ua_browser = detect_browser(ua_raw)
 
-    # нормализуем список, чтобы сравнение было регистро-независимым
-    dev_filter  = [v.lower() for v in json_in.get("device_filter",  "").split(",") if v.strip()]
-    os_filter   = [v.lower() for v in json_in.get("os_filter",      "").split(",") if v.strip()]
-    brw_filter  = [v.lower() for v in json_in.get("browser_filter", "").split(",") if v.strip()]
+   # 0.d берём фильтры из DB (по stream_id)
+    db_filters  = get_stream_filters(stream_id) or {}
+    dev_filter  = [v.lower() for v in db_filters.get("device_filter","").split(",")  if v]
+    os_filter   = [v.lower() for v in db_filters.get("os_filter","").split(",")      if v]
+    brw_filter  = [v.lower() for v in db_filters.get("browser_filter","").split(",") if v]
 
     if dev_filter and ua_device not in dev_filter:
         return early_white("Device",  f"{ua_device} not in {dev_filter}")
