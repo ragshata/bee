@@ -8,7 +8,7 @@ from loguru      import logger
 from db_streams  import is_stream_paused, get_stream_filters
 import socket
 
-LOW = str.lower   # короткий алиас
+LOW = str.lower                    # короткий алиас
 
 # ───────── helpers ──────────────────────────────────────────
 def is_ipv6(ip: str) -> bool:
@@ -19,31 +19,33 @@ def is_ipv6(ip: str) -> bool:
         return False
 
 def detect_device(ua: str) -> str:
-    if not ua:                 return "other"
     ua_l = ua.lower()
-    if "mobile" in ua_l:       return "mobile"
-    if "tablet" in ua_l:       return "tablet"
+    if not ua_l:             return "other"
+    if "mobile" in ua_l:     return "mobile"
+    if "tablet" in ua_l:     return "tablet"
     return "desktop"
 
 def detect_os(ua: str) -> str:
-    if not ua:                 return "other"
     ua_l = ua.lower()
-    if "windows" in ua_l:      return "windows"
-    if "android" in ua_l:      return "android"
-    if "iphone"  in ua_l:      return "ios"
-    if "ipad"    in ua_l:      return "ios"
-    if "mac os"  in ua_l:      return "macos"
-    if "linux"   in ua_l:      return "linux"
+    if not ua_l:             return "other"
+    if "windows" in ua_l:    return "windows"
+    if "android" in ua_l:    return "android"
+    if "iphone"  in ua_l:    return "ios"
+    if "ipad"    in ua_l:    return "ios"
+    if "mac os"  in ua_l:    return "macos"
+    if "linux"   in ua_l:    return "linux"
     return "other"
 
 def detect_browser(ua: str) -> str:
-    if not ua:                 return "other"
     ua_l = ua.lower()
-    if "chrome"  in ua_l:                       return "chrome"
-    if "firefox" in ua_l:                       return "firefox"
-    if "safari"  in ua_l and "chrome" not in ua_l: return "safari"
-    if "edge"    in ua_l:                       return "edge"
-    if "opera"   in ua_l or "opr" in ua_l:      return "opera"
+    if not ua_l:                     return "other"
+    if "chrome"  in ua_l:            return "chrome"
+    if "firefox" in ua_l:            return "firefox"
+    if "safari"  in ua_l and "chrome" not in ua_l:
+        return "safari"
+    if "edge"    in ua_l:            return "edge"
+    if "opera"   in ua_l or "opr" in ua_l:
+        return "opera"
     return "other"
 
 # ───────── logger / app ─────────────────────────────────────
@@ -57,7 +59,7 @@ def dev_test():
 # ────────── MAIN ────────────────────────────────────────────
 @app.route("/", methods=["POST"])
 def application():
-    # 0. raw JSON
+    # ─── 0. raw JSON ────────────────────────────────────────
     try:
         json_in = request.get_json()
     except Exception:
@@ -66,18 +68,19 @@ def application():
     logger.debug(json_in)
     stream_id = json_in.get("stream_id")
 
-    # 0.a pause
+    # 0.a stream pause
     if is_stream_paused(stream_id):
         logger.debug(f"Stream {stream_id} paused → white")
         return jsonify(status=1, redirect=1)
 
+    # 0.b IPv6-блок
     ip         = json_in.get("ip", "")
     block_ipv6 = json_in.get("block_ipv6", 0)
     if block_ipv6 and is_ipv6(ip):
         logger.debug(f"IPv6 {ip} blocked → white")
         return jsonify(status=1, redirect=1)
 
-    # 0.b transport decode (login нужен для stat)
+    # 0.c transport → login
     try:
         encoded = decrypt(json_in.get("transport", ""))
         login   = ex_login(encoded)
@@ -86,12 +89,25 @@ def application():
         encoded = ""
         login   = ""
 
-    # 0.c фильтры: БД → если пусто, берём из запроса (обратная совместимость)
-    filters_db = get_stream_filters(stream_id) or {}
-    device_filter_raw  = filters_db.get("device_filter")  or json_in.get("device_filter",  "")
-    os_filter_raw      = filters_db.get("os_filter")      or json_in.get("os_filter",      "")
-    browser_filter_raw = filters_db.get("browser_filter") or json_in.get("browser_filter", "")
+    # 0.d фильтры: сначала смотрим, пришли ли они прямо в запросе,
+    #              иначе берем из БД
+    filters_json = {
+        "device_filter":  json_in.get("device_filter",  ""),
+        "os_filter":      json_in.get("os_filter",      ""),
+        "browser_filter": json_in.get("browser_filter", ""),
+    }
+    if any(filters_json.values()):
+        filters = filters_json
+        logger.debug("Filters taken from POST")
+    else:
+        filters = get_stream_filters(stream_id) or {}
+        logger.debug("Filters taken from DB")
 
+    device_filter_raw  = filters.get("device_filter",  "")
+    os_filter_raw      = filters.get("os_filter",      "")
+    browser_filter_raw = filters.get("browser_filter", "")
+
+    # нормализуем списки
     dev_filter = [LOW(v.strip()) for v in device_filter_raw.split(",")  if v.strip()]
     os_filter  = [LOW(v.strip()) for v in os_filter_raw.split(",")      if v.strip()]
     brw_filter = [LOW(v.strip()) for v in browser_filter_raw.split(",") if v.strip()]
@@ -100,16 +116,22 @@ def application():
 
     ua_raw = json_in.get("user-agent") or ""
 
+    # ─── helper для быстрого выхода на white ────────────────
     def early_white(reason: str, descr: str):
         logger.debug(f"[{reason}] {descr} → white")
         click({
-            "ip": ip, "ua": ua_raw, "ref": json_in.get("referer",""),
-            "login": login, "page": "White", "filter": reason,
-            "descr": descr, "stream_id": stream_id
+            "ip": ip,
+            "ua": ua_raw,
+            "ref": json_in.get("referer", ""),
+            "login": login,
+            "page": "White",
+            "filter": reason,
+            "descr": descr,
+            "stream_id": stream_id,
         })
         return jsonify(status=1, redirect=1)
 
-    # пустой UA
+    # 0.e пустой UA
     if not ua_raw:
         return early_white("UA", "empty UA")
 
@@ -124,7 +146,7 @@ def application():
     if brw_filter and ua_browser not in brw_filter:
         return early_white("Browser", f"'{ua_browser}' not in {brw_filter}")
 
-    # 1. license
+    # ─── 1. license ─────────────────────────────────────────
     try:
         key = ex_key(encoded)
         if not check_license(key):
@@ -133,7 +155,7 @@ def application():
         logger.exception(lic_e)
         return jsonify(status=0, error_text="Request Failed (02)")
 
-    # 2. базовая stats-структура
+    # ─── 2. базовый stats ──────────────────────────────────
     stats = {
         "ip": ip,
         "ua": ua_raw,
@@ -145,7 +167,7 @@ def application():
         "stream_id": stream_id,
     }
 
-    # ---------- 3. Referrer ----------
+    # ─── 3. Referrer ───────────────────────────────────────
     logger.info("[2] Check Referrer")
     try:
         referer    = json_in.get("referer", "")
@@ -161,7 +183,7 @@ def application():
     except Exception as ref_e:
         logger.exception(ref_e); return jsonify(status=0, error_text="Request Failed (03)")
 
-    # ---------- 4. UA blacklist ----------
+    # ─── 4. UA blacklist ───────────────────────────────────
     logger.info("[3] Check User-Agent blacklist")
     try:
         if check_user_agent(ua_raw):
@@ -170,7 +192,7 @@ def application():
     except Exception as ua_e:
         logger.exception(ua_e); return jsonify(status=0, error_text="Request Failed (04)")
 
-    # ---------- 5. IP blacklist ----------
+    # ─── 5. IP blacklist ───────────────────────────────────
     logger.info("[4] Check IP blacklist")
     try:
         if check_ip(ip):
@@ -179,7 +201,7 @@ def application():
     except Exception as ip_e:
         logger.exception(ip_e); return jsonify(status=0, error_text="Request Failed (05)")
 
-    # ---------- 6. GEO ----------
+    # ─── 6. GEO ────────────────────────────────────────────
     logger.info("[5] Check GEO filter")
     try:
         blocked_method = json_in.get("blocked_method")
@@ -196,7 +218,7 @@ def application():
     except Exception as geo_e:
         logger.exception(geo_e); return jsonify(status=0, error_text="Request Failed (06)")
 
-    # ---------- 7. VPN / proxy ----------
+    # ─── 7. VPN / proxy ────────────────────────────────────
     if json_in.get("check_ip") == 1:
         logger.debug("[6] Check open ports")
         try:
@@ -206,7 +228,7 @@ def application():
         except Exception as port_e:
             logger.exception(port_e); return jsonify(status=0, error_text="Request Failed (07)")
 
-    # ---------- 8. OK ----------
+    # ─── 8. success ────────────────────────────────────────
     logger.info("All checks passed → black")
     stats.update({"page":"Black","descr":"OK"})
     click(stats)
