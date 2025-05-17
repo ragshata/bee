@@ -105,6 +105,11 @@ def application():
     browser_filter = json.get('browser_filter', '')
     user_agent = json.get('user-agent', '')
 
+    # --- Блокировка если пустой user-agent ---
+    if not user_agent or user_agent.strip() == "":
+        logger.debug("User-Agent is empty! Redirect to White Page...")
+        return jsonify(status=1, redirect=1)
+
     allowed_devices = [d.strip() for d in device_filter.split(",") if d.strip()]
     allowed_os = [o.strip() for o in os_filter.split(",") if o.strip()]
     allowed_browsers = [b.strip() for b in browser_filter.split(",") if b.strip()]
