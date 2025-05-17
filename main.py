@@ -8,6 +8,8 @@ from loguru      import logger
 from db_streams  import is_stream_paused, get_stream_filters   # ← NEW
 import socket
 
+LOW  = str.lower
+
 # ───────── helpers ──────────────────────────────────────────
 def is_ipv6(ip: str) -> bool:
     try:
@@ -17,27 +19,30 @@ def is_ipv6(ip: str) -> bool:
         return False
 
 def detect_device(ua: str) -> str:
-    if not ua:            return "other"
-    if "mobile" in ua:    return "mobile"
-    if "tablet" in ua:    return "tablet"
+    if not ua:               return "other"
+    if "mobile" in ua.lower():   return "mobile"
+    if "tablet" in ua.lower():   return "tablet"
     return "desktop"
 
 def detect_os(ua: str) -> str:
-    ua = ua or ""
-    if "windows" in ua:   return "windows"
-    if "android" in ua:   return "android"
-    if "iphone" in ua or "ipad" in ua: return "ios"
-    if "mac os" in ua:    return "macos"
-    if "linux" in ua:     return "linux"
+    if not ua:                    return "other"
+    ua_l = ua.lower()
+    if "windows" in ua_l:         return "windows"
+    if "android" in ua_l:         return "android"
+    if "iphone"  in ua_l:         return "ios"
+    if "ipad"    in ua_l:         return "ios"
+    if "mac os"  in ua_l:         return "macos"
+    if "linux"   in ua_l:         return "linux"
     return "other"
 
 def detect_browser(ua: str) -> str:
-    ua = ua or ""
-    if "opr" in ua or "opera" in ua:        return "opera"
-    if "edg" in ua:                         return "edge"
-    if "chrome" in ua:                      return "chrome"
-    if "firefox" in ua:                     return "firefox"
-    if "safari" in ua and "chrome" not in ua: return "safari"
+    if not ua:                    return "other"
+    ua_l = ua.lower()
+    if "chrome"  in ua_l:                         return "chrome"
+    if "firefox" in ua_l:                         return "firefox"
+    if "safari"  in ua_l and "chrome" not in ua_l:return "safari"
+    if "edge"    in ua_l:                         return "edge"
+    if "opera"   in ua_l or "opr" in ua_l:        return "opera"
     return "other"
 
 # ───────── logger / app ─────────────────────────────────────
@@ -81,10 +86,13 @@ def application():
         login   = ""
 
     # 0.c получаем фильтры из БД + то, что мог прислать PHP
-    filters_db = (get_stream_filters(stream_id) or {})
-    device_filter_raw  = f"{filters_db.get('device_filter','')},{json_in.get('device_filter','')}"
-    os_filter_raw      = f"{filters_db.get('os_filter','')},{json_in.get('os_filter','')}"
-    browser_filter_raw = f"{filters_db.get('browser_filter','')},{json_in.get('browser_filter','')}"
+    filters = get_stream_filters(stream_id) or {}
+    dev_filter  = [LOW(v) for v in filters.get("device_filter",  "").split(",") if v]
+    os_filter   = [LOW(v) for v in filters.get("os_filter",      "").split(",") if v]
+    brw_filter  = [LOW(v) for v in filters.get("browser_filter", "").split(",") if v]
+
+    logger.debug(f"DB filters for stream {stream_id}: {filters}")
+    logger.debug(f"Normalized ⇒ dev:{dev_filter}, os:{os_filter}, brw:{brw_filter}")
 
     # нормализуем
     dev_filter = [v.strip().lower() for v in device_filter_raw.split(",")  if v.strip()]
@@ -110,12 +118,12 @@ def application():
     ua_os      = detect_os(ua_raw)
     ua_browser = detect_browser(ua_raw)
 
-    if dev_filter and ua_device  not in dev_filter:
-        return early_white("Device",  f"{ua_device} not in {dev_filter}")
-    if os_filter  and ua_os      not in os_filter:
-        return early_white("OS",      f"{ua_os} not in {os_filter}")
+    if dev_filter and ua_device not in dev_filter:
+        return early_white("Device",  f"'{ua_device}' not in {dev_filter}")
+    if os_filter and ua_os not in os_filter:
+        return early_white("OS",      f"'{ua_os}' not in {os_filter}")
     if brw_filter and ua_browser not in brw_filter:
-        return early_white("Browser", f"{ua_browser} not in {brw_filter}")
+        return early_white("Browser", f"'{ua_browser}' not in {brw_filter}")
 
     # 1. license
     try:
