@@ -83,7 +83,7 @@ def application():
         login   = ""
 
     # ---------- 0.d Device / OS / Browser ----------
-    ua_raw = json_in.get("user-agent", "")
+    ua_raw = json_in.get("user-agent") or ""
 
     def early_white(reason: str, descr: str):
         logger.debug(f"[{reason}] {descr} → white")
