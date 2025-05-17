@@ -5,10 +5,10 @@ from lic         import check_license, decrypt, ex_key, ex_login, cprint_heck_li
 from scanner2    import check_ports
 from stats       import click
 from loguru      import logger
-from db_streams  import is_stream_paused, get_stream_filters   # ← NEW
+from db_streams  import is_stream_paused, get_stream_filters
 import socket
 
-LOW  = str.lower
+LOW = str.lower   # короткий алиас
 
 # ───────── helpers ──────────────────────────────────────────
 def is_ipv6(ip: str) -> bool:
@@ -19,30 +19,31 @@ def is_ipv6(ip: str) -> bool:
         return False
 
 def detect_device(ua: str) -> str:
-    if not ua:               return "other"
-    if "mobile" in ua.lower():   return "mobile"
-    if "tablet" in ua.lower():   return "tablet"
+    if not ua:                 return "other"
+    ua_l = ua.lower()
+    if "mobile" in ua_l:       return "mobile"
+    if "tablet" in ua_l:       return "tablet"
     return "desktop"
 
 def detect_os(ua: str) -> str:
-    if not ua:                    return "other"
+    if not ua:                 return "other"
     ua_l = ua.lower()
-    if "windows" in ua_l:         return "windows"
-    if "android" in ua_l:         return "android"
-    if "iphone"  in ua_l:         return "ios"
-    if "ipad"    in ua_l:         return "ios"
-    if "mac os"  in ua_l:         return "macos"
-    if "linux"   in ua_l:         return "linux"
+    if "windows" in ua_l:      return "windows"
+    if "android" in ua_l:      return "android"
+    if "iphone"  in ua_l:      return "ios"
+    if "ipad"    in ua_l:      return "ios"
+    if "mac os"  in ua_l:      return "macos"
+    if "linux"   in ua_l:      return "linux"
     return "other"
 
 def detect_browser(ua: str) -> str:
-    if not ua:                    return "other"
+    if not ua:                 return "other"
     ua_l = ua.lower()
-    if "chrome"  in ua_l:                         return "chrome"
-    if "firefox" in ua_l:                         return "firefox"
-    if "safari"  in ua_l and "chrome" not in ua_l:return "safari"
-    if "edge"    in ua_l:                         return "edge"
-    if "opera"   in ua_l or "opr" in ua_l:        return "opera"
+    if "chrome"  in ua_l:                       return "chrome"
+    if "firefox" in ua_l:                       return "firefox"
+    if "safari"  in ua_l and "chrome" not in ua_l: return "safari"
+    if "edge"    in ua_l:                       return "edge"
+    if "opera"   in ua_l or "opr" in ua_l:      return "opera"
     return "other"
 
 # ───────── logger / app ─────────────────────────────────────
@@ -85,16 +86,19 @@ def application():
         encoded = ""
         login   = ""
 
-    # 0.c получаем фильтры из БД + то, что мог прислать PHP
-    filters = get_stream_filters(stream_id) or {}
-    dev_filter  = [LOW(v) for v in filters.get("device_filter",  "").split(",") if v]
-    os_filter   = [LOW(v) for v in filters.get("os_filter",      "").split(",") if v]
-    brw_filter  = [LOW(v) for v in filters.get("browser_filter", "").split(",") if v]
+    # 0.c фильтры: БД → если пусто, берём из запроса (обратная совместимость)
+    filters_db = get_stream_filters(stream_id) or {}
+    device_filter_raw  = filters_db.get("device_filter")  or json_in.get("device_filter",  "")
+    os_filter_raw      = filters_db.get("os_filter")      or json_in.get("os_filter",      "")
+    browser_filter_raw = filters_db.get("browser_filter") or json_in.get("browser_filter", "")
 
-    logger.debug(f"DB filters for stream {stream_id}: {filters}")
-    logger.debug(f"Normalized ⇒ dev:{dev_filter}, os:{os_filter}, brw:{brw_filter}")
+    dev_filter = [LOW(v.strip()) for v in device_filter_raw.split(",")  if v.strip()]
+    os_filter  = [LOW(v.strip()) for v in os_filter_raw.split(",")      if v.strip()]
+    brw_filter = [LOW(v.strip()) for v in browser_filter_raw.split(",") if v.strip()]
 
-    ua_raw = (json_in.get("user-agent") or "").lower()
+    logger.debug(f"Filters ⇒ dev:{dev_filter}, os:{os_filter}, brw:{brw_filter}")
+
+    ua_raw = json_in.get("user-agent") or ""
 
     def early_white(reason: str, descr: str):
         logger.debug(f"[{reason}] {descr} → white")
@@ -140,6 +144,7 @@ def application():
         "descr": "",
         "stream_id": stream_id,
     }
+
     # ---------- 3. Referrer ----------
     logger.info("[2] Check Referrer")
     try:
@@ -147,13 +152,11 @@ def application():
         custom_ref = json_in.get("cn_referer", "")
         if referer:
             logger.debug("Check Referrer enabled")
-            if custom_ref and custom_ref.lower() not in referer.lower():
-                stats.update({"page":"White","filter":"Referer",
-                              "descr":"Referer mismatch"})
+            if custom_ref and LOW(custom_ref) not in LOW(referer):
+                stats.update({"page":"White","filter":"Referer","descr":"Referer mismatch"})
                 click(stats); return jsonify(status=1, redirect=1)
             if referer == "none":
-                stats.update({"page":"White","filter":"Referer",
-                              "descr":"Empty Referer"})
+                stats.update({"page":"White","filter":"Referer","descr":"Empty Referer"})
                 click(stats); return jsonify(status=1, redirect=1)
     except Exception as ref_e:
         logger.exception(ref_e); return jsonify(status=0, error_text="Request Failed (03)")
