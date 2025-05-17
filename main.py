@@ -16,6 +16,8 @@ def is_ipv6(ip):
         return False
 
 def detect_device(ua):
+    if not ua:  # если None или пустая строка
+        return "Other"
     if "Mobile" in ua:
         return "Mobile"
     if "Tablet" in ua:
@@ -23,20 +25,35 @@ def detect_device(ua):
     return "Desktop"
 
 def detect_os(ua):
-    ua = ua.lower()
-    if "windows" in ua: return "Windows"
-    if "android" in ua: return "Android"
-    if "iphone" in ua or "ipad" in ua: return "iOS"
-    if "mac os" in ua: return "MacOS"
-    if "linux" in ua: return "Linux"
+    if not ua:
+        return "Other"
+    if "Windows" in ua:
+        return "Windows"
+    if "Android" in ua:
+        return "Android"
+    if "iPhone" in ua:
+        return "iOS"
+    if "iPad" in ua:
+        return "iOS"
+    if "Mac OS" in ua:
+        return "MacOS"
+    if "Linux" in ua:
+        return "Linux"
     return "Other"
 
 def detect_browser(ua):
-    if "Chrome" in ua: return "Chrome"
-    if "Firefox" in ua: return "Firefox"
-    if "Safari" in ua and "Chrome" not in ua: return "Safari"
-    if "Edge" in ua: return "Edge"
-    if "Opera" in ua or "OPR" in ua: return "Opera"
+    if not ua:
+        return "Other"
+    if "Chrome" in ua:
+        return "Chrome"
+    if "Firefox" in ua:
+        return "Firefox"
+    if "Safari" in ua and "Chrome" not in ua:
+        return "Safari"
+    if "Edge" in ua:
+        return "Edge"
+    if "Opera" in ua or "OPR" in ua:
+        return "Opera"
     return "Other"
 
 logger.add("api.log", rotation="500 MB", encoding="utf-8", level="DEBUG")
