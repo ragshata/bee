@@ -120,12 +120,46 @@ def application():
 
     if allowed_devices and ua_device not in allowed_devices:
         logger.debug(f"Device '{ua_device}' not allowed. Redirect to White Page.")
+        stats = {
+            "ip": json.get("ip", ""),
+            "ua": user_agent,
+            "ref": json.get("referer", ""),
+            "login": ex_login(encoded) if 'encoded' in locals() else "",
+            "page": "White",
+            "filter": "Device",
+            "descr": f"Device '{ua_device}' not allowed ({allowed_devices})",
+            "stream_id": json.get("stream_id"),
+        }
+        click(stats)
         return jsonify(status=1, redirect=1)
     if allowed_os and ua_os not in allowed_os:
         logger.debug(f"OS '{ua_os}' not allowed. Redirect to White Page.")
+        stats = {
+            "ip": json.get("ip", ""),
+            "ua": user_agent,
+            "ref": json.get("referer", ""),
+            "login": ex_login(encoded) if 'encoded' in locals() else "",
+            "page": "White",
+            "filter": "OS",
+            "descr": f"OS '{ua_os}' not allowed ({allowed_os})",
+            "stream_id": json.get("stream_id"),
+        }
+        click(stats)
         return jsonify(status=1, redirect=1)
+    
     if allowed_browsers and ua_browser not in allowed_browsers:
         logger.debug(f"Browser '{ua_browser}' not allowed. Redirect to White Page.")
+        stats = {
+            "ip": json.get("ip", ""),
+            "ua": user_agent,
+            "ref": json.get("referer", ""),
+            "login": ex_login(encoded) if 'encoded' in locals() else "",
+            "page": "White",
+            "filter": "Browser",
+            "descr": f"Browser '{ua_browser}' not allowed ({allowed_browsers})",
+            "stream_id": json.get("stream_id"),
+        }
+        click(stats)
         return jsonify(status=1, redirect=1)
     # -------------------------------------------------------------------------
 
