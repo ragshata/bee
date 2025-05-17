@@ -1,4 +1,4 @@
-import requests
+import requests, json
 
 FASTPANEL_URL = "https://beeclick.io"          # ← замените, если фронт на другом домене
 
@@ -19,9 +19,16 @@ def is_stream_paused(stream_id: int) -> bool:
         pass                       # глушим любые ошибки, считаем «паузы нет»
 
     return False
-def get_stream_filters(stream_id: int) -> dict | None:
+def get_stream_filters(stream_id: int) -> dict:
     """
-    SELECT device_filter, os_filter, browser_filter
-      FROM streams
-     WHERE id = %s
+    Возвращает {'device_filter':'...', 'os_filter':'...', 'browser_filter':'...'}
+    или пустой dict, если что-то пошло не так.
     """
+    try:
+        r = requests.get(f"{FASTPANEL_URL}/filters/{stream_id}", timeout=2)
+        if r.ok:
+            data = r.json()
+            return data.get("filters", {})
+    except Exception:
+        pass
+    return {}
