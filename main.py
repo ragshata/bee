@@ -160,6 +160,7 @@ def application():
     try:
         key = ex_key(encoded)
         if not check_license(key):
+            logger.debug("[License] expired")
             return jsonify(status=0, error_text="License Expired")
     except Exception as lic_e:
         logger.exception(lic_e)
@@ -185,9 +186,11 @@ def application():
         if referer:
             logger.debug("Check Referrer enabled")
             if custom_ref and LOW(custom_ref) not in LOW(referer):
+                logger.debug("[Referrer] mismatch")
                 stats.update({"page":"White","filter":"Referer","descr":"Referer mismatch"})
                 click(stats); return jsonify(status=1, redirect=1)
             if referer == "none":
+                logger.debug("[Referrer] empty")
                 stats.update({"page":"White","filter":"Referer","descr":"Empty Referer"})
                 click(stats); return jsonify(status=1, redirect=1)
     except Exception as ref_e:
@@ -197,6 +200,7 @@ def application():
     logger.info("[3] Check User-Agent blacklist")
     try:
         if check_user_agent(ua_raw):
+            logger.debug("[UA-blacklist] hit")
             stats.update({"page":"White","filter":"User-Agent","descr":"UA in blacklist"})
             click(stats); return jsonify(status=1, redirect=1)
     except Exception as ua_e:
@@ -206,6 +210,7 @@ def application():
     logger.info("[4] Check IP blacklist")
     try:
         if check_ip(ip):
+            logger.debug("[IP-blacklist] hit")
             stats.update({"page":"White","filter":"IP","descr":"IP in blacklist"})
             click(stats); return jsonify(status=1, redirect=1)
     except Exception as ip_e:
@@ -219,10 +224,12 @@ def application():
         user_country   = check_ip_geo(ip)
 
         if blocked_method == 1 and user_country in country_list:
+            logger.debug("[GEO] blacklist hit")
             stats.update({"page":"White","filter":"GEO","descr":"Country in blacklist"})
             click(stats); return jsonify(status=1, redirect=1)
 
         if blocked_method == 2 and user_country not in country_list:
+            logger.debug("[GEO] not in whitelist")
             stats.update({"page":"White","filter":"GEO","descr":"Country not in whitelist"})
             click(stats); return jsonify(status=1, redirect=1)
     except Exception as geo_e:
@@ -233,6 +240,7 @@ def application():
         logger.debug("[6] Check open ports")
         try:
             if check_ports(ip):
+                logger.debug("[VPN] anonymizer detected")
                 stats.update({"page":"White","filter":"VPN/PROXY","descr":"Anonymizer detected"})
                 click(stats); return jsonify(status=1, redirect=1)
         except Exception as port_e:
